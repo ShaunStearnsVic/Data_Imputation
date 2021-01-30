@@ -1,0 +1,92 @@
+---
+title: "Data Imputation"
+author: "Shaun Stearns"
+date: "3/11/2020"
+output: html_document
+---
+
+
+
+# Mean Imputation
+```{r}
+library(imputeTS)
+setwd("D:/CSU Global Data Analytics/MIS510/TextBookMaterials/DMBA-R-datasets")
+cereals.df <- read.csv("cereals.csv")
+cereals.df <- na_mean(cereals.df)
+```
+
+
+# Median Imputation
+```{r}
+library(imputeTS)
+setwd("D:/CSU Global Data Analytics/MIS510/TextBookMaterials/DMBA-R-datasets")
+cereals.df <- read.csv("cereals.csv")
+cereals.df <- na_mean(cereals.df, option = "median")
+```
+
+
+# Mode Imputation
+```{r}
+library(imputeTS)
+setwd("D:/CSU Global Data Analytics/MIS510/TextBookMaterials/DMBA-R-datasets")
+cereals.df <- read.csv("cereals.csv")
+cereals.df <- na_mean(cereals.df, option = "mode")
+```
+
+
+# Hotdeck Imputation
+```{r}
+library(simputation)
+library(VIM)
+setwd("D:/CSU Global Data Analytics/MIS510/TextBookMaterials/DMBA-R-datasets")
+cereals.df <- read.csv("cereals.csv")
+# Check Data
+head(cereals.df)
+# Get List of Names
+t(t(names(cereals.df)))
+# Get Number of NA's per Variable
+sapply(cereals.df, function(x) sum(is.na(x)))
+# Hot Deck Imputation
+cereals.df1 <- cereals.df [-c(1)]
+cereals.df2 <- cereals.df [c(1)]
+cereals.df1 <- impute_rhd(cereals.df1, . ~ 1, pool="univariate")
+cereals.df <- cbind2(cereals.df1, cereals.df2)
+# Recheck for NA's
+sapply(cereals.df, function(x) sum(is.na(x)))
+```
+
+
+#Multiple Imputation
+```{r}
+library(mice)
+library(VIM)
+library(lattice)
+library(sjmisc)
+data(nhanes)
+str(nhanes)
+nhanes$age = factor(nhanes$age)
+nhanes$hyp = factor(nhanes$hyp)
+# Sum total missing values
+sapply(nhanes, function(x) sum(is.na(x)))
+# Check Model with exluded rows with NA's
+fit.cc = lm(chl ~ age + bmi, data=nhanes)
+summary(fit.cc)
+
+# Increase the number of imputations to m=20
+imp20 = mice(nhanes, m=20, printFlag=FALSE, maxit = 30, where = is.na(nhanes), seed=2525)
+fit.mi20 = with(data=imp20, exp = lm(chl ~ age + bmi))
+combFit = pool(fit.mi20)
+summary(combFit)
+pool.r.squared(fit.mi20)
+
+# Chosen Method per Variable
+imp20$meth
+
+# Visualize Imputed Data
+densityplot(imp20)
+
+# Imputed dataset
+nhanes1 <- nhanes[-c(2,3,4)]
+Imputation <- merge_imputations(nhanes, imp20)
+nhanes <- cbind2(nhanes1, Imputation)
+```
